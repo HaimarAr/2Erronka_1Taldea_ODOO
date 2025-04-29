@@ -1,0 +1,843 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+  <data>
+    <!-- ========== ZERBITZARIAREN IKUSPEGIAK ========== -->
+    <!-- Zerbitzariaren Zerrenda Ikuspegia -->
+    <record model="ir.ui.view" id="jatetxeko_estatistikak_zerbitzaria_list_view">
+      <field name="name">zerbitzaria.list.view</field>
+      <field name="model">jatetxeko_estatistikak.zerbitzaria</field>
+      <field name="priority">10</field>
+      <field name="arch" type="xml">
+        <list string="Zerbitzariak">
+          <header>
+            <!-- Sincronización botoia administratzaileentzat soilik ikusgai -->
+            <button name="sincronizar_datos"
+                    type="object"
+                    string="Sinkronizatu Guztiak"
+                    class="oe_highlight"
+                    icon="fa-refresh"
+                    groups="base.group_system"/>
+          </header>
+          <field name="worker_id" string="Langile IDa"/>
+          <field name="izena" string="Izena"/>
+          <field name="abizena" string="Abizena"/>
+          <field name="email" string="Emaila"/>
+          <field name="created_at" string="Sortze Data"/>
+          <!-- Banakako sinkronizazio botoia administratzaileentzat soilik -->
+          <button name="sincronizar_registro_individual"
+                  type="object"
+                  string="Sinkronizatu"
+                  class="oe_stat_button"
+                  icon="fa-sync"
+                  groups="base.group_system"/>
+        </list>
+      </field>
+    </record>
+
+    <!-- Zerbitzariaren Kanban Ikuspegia -->
+    <record model="ir.ui.view" id="jatetxeko_estatistikak_zerbitzaria_kanban_view">
+      <field name="name">zerbitzaria.kanban.view</field>
+      <field name="model">jatetxeko_estatistikak.zerbitzaria</field>
+      <field name="arch" type="xml">
+        <kanban>
+          <header>
+            <!-- Sincronización botoia administratzaileentzat soilik ikusgai -->
+            <button name="sincronizar_datos"
+                    type="object"
+                    string="Sinkronizatu Guztiak"
+                    class="oe_highlight"
+                    icon="fa-refresh"
+                    groups="base.group_system"/>
+          </header>
+          <templates>
+            <t t-name="kanban-box">
+              <div class="oe_kanban_card">
+                <div class="oe_kanban_content">
+                  <strong>Langile IDa: <field name="worker_id"/></strong>
+                  <div><field name="izena"/></div>
+                  <div><field name="abizena"/></div>
+                  <div><field name="email" widget="email"/></div>
+                  <div>Sortze Data: <field name="created_at"/></div>
+                  <!-- Banakako sinkronizazio botoia administratzaileentzat soilik -->
+                  <button name="sincronizar_registro_individual"
+                          type="object"
+                          string="Sinkronizatu"
+                          class="oe_kanban_action_button"
+                          icon="fa-sync"
+                          groups="base.group_system"/>
+                </div>
+              </div>
+            </t>
+          </templates>
+        </kanban>
+      </field>
+    </record>
+
+    <!-- Zerbitzariaren Formulario Ikuspegia -->
+    <record model="ir.ui.view" id="jatetxeko_estatistikak_zerbitzaria_form_view">
+      <field name="name">zerbitzaria.form.view</field>
+      <field name="model">jatetxeko_estatistikak.zerbitzaria</field>
+      <field name="arch" type="xml">
+        <form>
+          <header>
+            <!-- Sincronización botoia administratzaileentzat soilik ikusgai -->
+            <button name="sincronizar_datos"
+                    type="object"
+                    string="Sinkronizatu Guztiak"
+                    class="oe_highlight"
+                    icon="fa-refresh"
+                    groups="base.group_system"/>
+          </header>
+          <sheet>
+            <group>
+              <field name="worker_id" string="Langile IDa"/>
+              <field name="izena" string="Izena"/>
+              <field name="abizena" string="Abizena"/>
+              <field name="email" string="Emaila" widget="email"/>
+              <!-- Administratzaileentzat soilik ikusgai diren eremu sentikorrak -->
+              <field name="pasahitza" groups="base.group_system" password="True"/>
+              <field name="nivel_Permisos" string="Baimen Maila" groups="base.group_system"/>
+              <field name="txat_permiso" string="Txat Baimena" groups="base.group_system"/>
+              <field name="created_at" string="Sortze Data" readonly="1"/>
+              <field name="updated_at" string="Eguneratze Data" readonly="1"/>
+              <field name="deleted_at" string="Ezabatze Data" readonly="1"/>
+            </group>
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+    <!-- ========== ZERBITZARIAREN EKINTZAK ========== -->
+    <record model="ir.actions.act_window" id="jatetxeko_estatistikak_zerbitzaria_list_action">
+      <field name="name">Zerbitzariak (Zerrenda)</field>
+      <field name="res_model">jatetxeko_estatistikak.zerbitzaria</field>
+      <field name="view_mode">list,form</field>
+      <field name="view_id" ref="jatetxeko_estatistikak_zerbitzaria_list_view"/>
+    </record>
+
+    <record model="ir.actions.act_window" id="jatetxeko_estatistikak_zerbitzaria_kanban_action">
+      <field name="name">Zerbitzariak (Ikuspegia)</field>
+      <field name="res_model">jatetxeko_estatistikak.zerbitzaria</field>
+      <field name="view_mode">kanban,form</field>
+      <field name="view_id" ref="jatetxeko_estatistikak_zerbitzaria_kanban_view"/>
+    </record>
+
+    <!-- ========== ESKAEREN IKUSPEGIAK ========== -->
+    <!-- Eskaeren Zerrenda Ikuspegia -->
+    <record model="ir.ui.view" id="jatetxeko_estatistikak_eskaera_list_view">
+      <field name="name">eskaera.list.view</field>
+      <field name="model">jatetxeko_estatistikak.eskaera</field>
+      <field name="priority">10</field>
+      <field name="arch" type="xml">
+        <list string="Eskaerak">
+          <header>
+            <!-- Sincronización botoia administratzaileentzat soilik ikusgai -->
+            <button name="sincronizar_eskaerak" 
+                    type="object" 
+                    string="Sinkronizatu Guztiak" 
+                    class="oe_highlight" 
+                    icon="fa-refresh"
+                    groups="base.group_system"/>
+          </header>
+          <field name="external_ref" string="Kanpoko IDa" readonly="1"/>
+          <field name="langilea_id" string="Langilea"/>
+          <field name="langilea_worker_id" string="Langile IDa"/>
+          <field name="mahaia_id" string="Mahaia"/>
+          <field name="status" string="Egoera"/>
+          <field name="done" string="Eginda"/>
+          <field name="EskaeraDone" string="Eskaera Eginda"/>
+          <field name="ordainduta" string="Ordainduta"/>
+          <!-- Banakako sinkronizazio botoia administratzaileentzat soilik -->
+          <button name="sincronizar_eskaera_bakarra" 
+                  type="object" 
+                  string="Sinkronizatu" 
+                  class="oe_stat_button" 
+                  icon="fa-sync"
+                  groups="base.group_system"/>
+        </list>
+      </field>
+    </record>
+
+    <!-- Eskaeren Formulario Ikuspegia -->
+    <record model="ir.ui.view" id="jatetxeko_estatistikak_eskaera_form_view">
+      <field name="name">eskaera.form.view</field>
+      <field name="model">jatetxeko_estatistikak.eskaera</field>
+      <field name="arch" type="xml">
+        <form>
+          <header>
+            <!-- Sincronización botoia administratzaileentzat soilik ikusgai -->
+            <button name="sincronizar_eskaerak"
+                    type="object"
+                    string="Sinkronizatu Guztiak"
+                    class="oe_highlight"
+                    icon="fa-refresh"
+                    groups="base.group_system"/>
+          </header>
+          <sheet>
+            <group>
+              <field name="external_ref" string="Kanpoko IDa" readonly="1"/>
+              <field name="langilea_id" string="Langilea"/>
+              <field name="langilea_worker_id" string="Langile IDa" readonly="1"/>
+              <field name="mahaia_id" string="Mahaia"/>
+              <field name="status" string="Egoera"/>
+              <field name="done" string="Eginda"/>
+              <field name="EskaeraDone" string="Eskaera Eginda"/>
+              <field name="ordainduta" string="Ordainduta"/>
+            </group>
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+    <!-- ========== ESKAEREN EKINTZAK ========== -->
+    <record model="ir.actions.act_window" id="jatetxeko_estatistikak_eskaera_list_action">
+      <field name="name">Eskaerak</field>
+      <field name="res_model">jatetxeko_estatistikak.eskaera</field>
+      <field name="view_mode">list,form</field>
+      <field name="view_id" ref="jatetxeko_estatistikak_eskaera_list_view"/>
+    </record>
+
+    <!-- ========== MAHAIEN IKUSPEGIAK ========== -->
+    <!-- Mahaien Zerrenda Ikuspegia -->
+    <record id="view_mahaia_list" model="ir.ui.view">
+      <field name="name">jatetxeko_estatistikak.mahaia.list</field>
+      <field name="model">jatetxeko_estatistikak.mahaia</field>
+      <field name="arch" type="xml">
+        <list string="Mahaiak">
+          <header>
+            <!-- Sincronización botoia administratzaileentzat soilik ikusgai -->
+            <button name="sincronizar_guztiak_mahaiak" 
+                    type="object" 
+                    string="Sinkronizatu Mahaiak" 
+                    class="oe_highlight" 
+                    icon="fa-refresh"
+                    groups="base.group_system"/>
+          </header>
+          <field name="zenbakia" string="Mahaia Zenbakia"/>
+          <field name="eserlekuak" string="Eserlekuak"/>
+          <field name="habilitado" string="Gaituta"/>
+          <field name="terraza" string="Terraza"/>
+          <field name="updated_at" string="Azken Eguneraketa"/>
+        </list>
+      </field>
+    </record>
+
+    <!-- Mahaien Kanban Ikuspegia -->
+    <record id="view_mahaia_kanban" model="ir.ui.view">
+      <field name="name">jatetxeko_estatistikak.mahaia.kanban</field>
+      <field name="model">jatetxeko_estatistikak.mahaia</field>
+      <field name="arch" type="xml">
+        <kanban default_order="zenbakia asc">
+          <field name="zenbakia"/>
+          <field name="eserlekuak"/>
+          <field name="habilitado"/>
+          <field name="terraza"/>
+          <field name="id"/>
+          <div class="oe_button_box" style="margin-bottom: 10px;">
+            <!-- Sincronización botoia administratzaileentzat soilik ikusgai -->
+            <button name="sincronizar_guztiak_mahaiak" 
+                    type="object" 
+                    string="Sinkronizatu Mahaiak" 
+                    class="oe_highlight btn-primary" 
+                    icon="fa-refresh"
+                    groups="base.group_system"/>
+          </div>
+          <templates>
+            <t t-name="kanban-box">
+              <div class="oe_kanban_global_click o_kanban_record">
+                <div class="oe_kanban_card oe_kanban_vertical">
+                  <div class="o_kanban_content">
+                    <strong>Mahaia <field name="zenbakia" class="oe_inline" readonly="0"/></strong>
+                    <div>Eserlekuak: <t t-esc="record.eserlekuak.raw_value"/></div>
+                    <div>Terraza: 
+                      <t t-if="record.terraza.raw_value">Bai</t>
+                      <t t-else="">Ez</t>
+                    </div>
+                    <div>Gaituta: 
+                      <t t-if="record.habilitado.raw_value">Bai</t>
+                      <t t-else="">Ez</t>
+                    </div>
+                    <!-- Banakako sinkronizazio botoia administratzaileentzat soilik -->
+                    <button name="sincronizar_mahaia" 
+                            type="object" 
+                            string="Sinkronizatu" 
+                            class="oe_kanban_action_button btn-primary" 
+                            icon="fa-sync"
+                            groups="base.group_system"/>
+                  </div>
+                </div>
+              </div>
+            </t>
+          </templates>
+        </kanban>
+      </field>
+    </record>
+
+    <!-- Mahaien Formulario Ikuspegia -->
+    <record id="view_mahaia_form" model="ir.ui.view">
+      <field name="name">jatetxeko_estatistikak.mahaia.form</field>
+      <field name="model">jatetxeko_estatistikak.mahaia</field>
+      <field name="arch" type="xml">
+        <form string="Mahaia">
+          <header>
+            <!-- Sincronización botoia administratzaileentzat soilik ikusgai -->
+            <button name="sincronizar_mahaia" 
+                    type="object" 
+                    string="Sinkronizatu Mahaia" 
+                    class="oe_highlight" 
+                    icon="fa-refresh"
+                    groups="base.group_system"/>
+          </header>
+          <sheet>
+            <group>
+              <field name="zenbakia" required="1"/>
+              <field name="eserlekuak" string="Eserlekuak"/>
+              <field name="habilitado" string="Gaituta"/>
+              <field name="terraza" string="Terraza"/>
+              <field name="updated_at" string="Azken Eguneraketa" readonly="1"/>
+            </group>
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+    <!-- Mahaien Ekintza -->
+    <record id="action_mahaia_kanban" model="ir.actions.act_window">
+      <field name="name">Mahaiak</field>
+      <field name="res_model">jatetxeko_estatistikak.mahaia</field>
+      <field name="view_mode">list,kanban,form</field>
+      <field name="view_id" ref="view_mahaia_list"/>
+    </record>
+
+    <!-- ========== PLATEREN IKUSPEGIAK ========== -->
+    <!-- Plateren Zerrenda Ikuspegia -->
+    <record model="ir.ui.view" id="jatetxeko_estatistikak_platera_list_view">
+      <field name="name">platera.list.view</field>
+      <field name="model">jatetxeko_estatistikak.platera</field>
+      <field name="priority">10</field>
+      <field name="arch" type="xml">
+        <list string="Platerak">
+          <header>
+            <!-- Sincronización botoia administratzaileentzat soilik ikusgai -->
+            <button name="sincronizar_guztiak_platerak" 
+                    type="object" 
+                    string="Sinkronizatu Platerak" 
+                    class="oe_highlight" 
+                    icon="fa-refresh"
+                    groups="base.group_system"/>
+          </header>
+          <field name="external_id" string="Kanpoko IDa" readonly="1"/>
+          <field name="izena" string="Izena"/>
+          <field name="deskribapena" string="Deskribapena"/>
+          <field name="mota" string="Mota"/>
+          <field name="platera_mota" string="Plater Mota"/>
+          <field name="prezioa" string="Prezioa"/>
+          <field name="menu" string="Menua"/>
+          <!-- Banakako sinkronizazio botoia administratzaileentzat soilik -->
+          <button name="sincronizar_platera" 
+                  type="object" 
+                  string="Sinkronizatu" 
+                  class="oe_stat_button" 
+                  icon="fa-sync"
+                  groups="base.group_system"/>
+        </list>
+      </field>
+    </record>
+
+    <!-- Plateren Kanban Ikuspegia -->
+    <record model="ir.ui.view" id="jatetxeko_estatistikak_platera_kanban_view">
+      <field name="name">platera.kanban.view</field>
+      <field name="model">jatetxeko_estatistikak.platera</field>
+      <field name="arch" type="xml">
+        <kanban>
+          <header>
+            <!-- Sincronización botoia administratzaileentzat soilik ikusgai -->
+            <button name="sincronizar_guztiak_platerak" 
+                    type="object" 
+                    string="Sinkronizatu Platerak" 
+                    class="oe_highlight" 
+                    icon="fa-refresh"
+                    groups="base.group_system"/>
+          </header>
+          <templates>
+            <t t-name="kanban-box">
+              <div class="oe_kanban_card">
+                <div class="oe_kanban_content">
+                  <strong>Platera: <field name="izena"/></strong>
+                  <div>Kanpoko IDa: <field name="external_id"/></div>
+                  <div>Deskribapena: <field name="deskribapena"/></div>
+                  <div>Mota: <field name="mota"/></div>
+                  <div>Plater Mota: <field name="platera_mota"/></div>
+                  <div>Prezioa: <field name="prezioa"/> €</div>
+                  <div>Menua: <field name="menu"/></div>
+                  <!-- Banakako sinkronizazio botoia administratzaileentzat soilik -->
+                  <button name="sincronizar_platera" 
+                          type="object" 
+                          string="Sinkronizatu" 
+                          class="oe_kanban_action_button" 
+                          icon="fa-sync"
+                          groups="base.group_system"/>
+                </div>
+              </div>
+            </t>
+          </templates>
+        </kanban>
+      </field>
+    </record>
+
+    <!-- Plateren Formulario Ikuspegia -->
+    <record model="ir.ui.view" id="jatetxeko_estatistikak_platera_form_view">
+      <field name="name">platera.form.view</field>
+      <field name="model">jatetxeko_estatistikak.platera</field>
+      <field name="arch" type="xml">
+        <form>
+          <header>
+            <!-- Sincronización botoia administratzaileentzat soilik ikusgai -->
+            <button name="sincronizar_guztiak_platerak" 
+                    type="object" 
+                    string="Sinkronizatu Platerak" 
+                    class="oe_highlight" 
+                    icon="fa-refresh"
+                    groups="base.group_system"/>
+          </header>
+          <sheet>
+            <group>
+              <field name="external_id" string="Kanpoko IDa" readonly="1"/>
+              <field name="izena" string="Izena"/>
+              <field name="deskribapena" string="Deskribapena"/>
+              <field name="mota" string="Mota"/>
+              <field name="platera_mota" string="Plater Mota"/>
+              <field name="prezioa" string="Prezioa"/>
+              <field name="menu" string="Menua"/>
+              <field name="created_at" string="Sortze Data" readonly="1"/>
+              <field name="created_by" string="Sortzailea" readonly="1"/>
+              <field name="updated_at" string="Eguneratze Data" readonly="1"/>
+              <field name="updated_by" string="Eguneratzailea" readonly="1"/>
+              <field name="deleted_at" string="Ezabatze Data" readonly="1"/>
+              <field name="deleted_by" string="Ezabatzailea" readonly="1"/>
+            </group>
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+    <!-- Plateren Ekintza -->
+    <record id="action_platera_kanban" model="ir.actions.act_window">
+      <field name="name">Platerak</field>
+      <field name="res_model">jatetxeko_estatistikak.platera</field>
+      <field name="view_mode">list,kanban,form</field>
+      <field name="view_id" ref="jatetxeko_estatistikak_platera_list_view"/>
+    </record>
+
+    <!-- ========== PLATERACANT-EN IKUSPEGIAK ========== -->
+    <!-- Platerak Kantitatearen Grafiko Ikuspegia -->
+    <record id="jatetxeko_estatistikak_plateracant_graph_view" model="ir.ui.view">
+      <field name="name">plateracant.graph.view</field>
+      <field name="model">jatetxeko_estatistikak.plateracant</field>
+      <field name="arch" type="xml">
+        <graph string="Eskatuenak Diren Platerak" type="bar">
+          <field name="plato_nombre" type="row"/>
+          <field name="cantidad_pedidos" type="measure"/>
+        </graph>
+      </field>
+    </record>
+
+    <!-- Grafikoa soilik irekitzeko ekintza berezia -->
+    <record id="action_plateracant_graph_only" model="ir.actions.act_window">
+      <field name="name">Ikusi Eskatuenak Diren Plateren Grafikoa</field>
+      <field name="res_model">jatetxeko_estatistikak.plateracant</field>
+      <field name="view_mode">graph</field>
+      <field name="view_id" ref="jatetxeko_estatistikak_plateracant_graph_view"/>
+    </record>
+
+    <!-- Platerak Kantitatearen Formulario Ikuspegia (Ongietorri Orria) -->
+    <record id="jatetxeko_estatistikak_plateracant_form_view" model="ir.ui.view">
+      <field name="name">plateracant.form.view</field>
+      <field name="model">jatetxeko_estatistikak.plateracant</field>
+      <field name="arch" type="xml">
+        <form string="Eskatuenak Diren Platerak">
+          <sheet>
+            <group>
+              <h2>Eskatuenak Diren Platerak</h2>
+              <p>Klikatu "Sinkronizatu" botoian API-tik datuak eguneratzeko, eta ondoren "Ikusi Grafikoa" botoian eskatutako plater gehienak ikusteko.</p>
+              <p><strong>Oharra:</strong> Grafikoa hutsik agertzen bada, ziurtatu datuak lehenik sinkronizatu dituzula.</p>
+            </group>
+            <group>
+              <!-- Sincronización botoia administratzaileentzat soilik ikusgai -->
+              <button name="sincronizar_plateracant"
+                      type="object"
+                      string="Sinkronizatu"
+                      class="oe_highlight"
+                      icon="fa-refresh"
+                      groups="base.group_system"/>
+              <button string="Ikusi Grafikoa"
+                      type="action"
+                      name="%(jatetxeko_estatistikak.action_plateracant_graph_only)d"
+                      class="oe_highlight"
+                      icon="fa-bar-chart"/>
+            </group>
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+    <!-- Platerak Kantitatearen Zerrenda Ikuspegia -->
+    <record id="jatetxeko_estatistikak_plateracant_list_view" model="ir.ui.view">
+      <field name="name">plateracant.list.view</field>
+      <field name="model">jatetxeko_estatistikak.plateracant</field>
+      <field name="arch" type="xml">
+        <list string="Eskatuenak Diren Platerak">
+          <field name="plato_nombre" string="Plateraren Izena"/>
+          <field name="cantidad_pedidos" string="Eskaera Kopurua"/>
+        </list>
+      </field>
+    </record>
+
+    <!-- Grafiko Ikuspegiaren Ekintza (Nagusia, formularekin) -->
+    <record id="action_plateracant_graph" model="ir.actions.act_window">
+      <field name="name">Eskatuenak Diren Platerak</field>
+      <field name="res_model">jatetxeko_estatistikak.plateracant</field>
+      <field name="view_mode">form,graph,list</field>
+      <field name="view_id" ref="jatetxeko_estatistikak_plateracant_form_view"/>
+    </record>
+
+    <!-- ========== ZERBITZARI PEDIDOEN IKUSPEGIAK ========== -->
+    <!-- Zerbitzari Pedidoen Grafiko Ikuspegia -->
+    <record id="jatetxeko_estatistikak_zerbitzari_pedidos_graph_view" model="ir.ui.view">
+      <field name="name">zerbitzari_pedidos.graph.view</field>
+      <field name="model">jatetxeko_estatistikak.zerbitzari_pedidos</field>
+      <field name="arch" type="xml">
+        <graph string="Zerbitzarien Eskaerak" type="bar">
+          <field name="zerbitzari_nombre" type="row"/>
+          <field name="cantidad_pedidos" type="measure"/>
+        </graph>
+      </field>
+    </record>
+
+    <!-- Grafikoa soilik irekitzeko ekintza berezia -->
+    <record id="action_zerbitzari_pedidos_graph_only" model="ir.actions.act_window">
+      <field name="name">Ikusi Zerbitzarien Eskaeren Grafikoa</field>
+      <field name="res_model">jatetxeko_estatistikak.zerbitzari_pedidos</field>
+      <field name="view_mode">graph</field>
+      <field name="view_id" ref="jatetxeko_estatistikak_zerbitzari_pedidos_graph_view"/>
+    </record>
+
+    <!-- Zerbitzari Pedidoen Formulario Ikuspegia (Ongietorri Orria) -->
+    <record id="jatetxeko_estatistikak_zerbitzari_pedidos_form_view" model="ir.ui.view">
+      <field name="name">zerbitzari_pedidos.form.view</field>
+      <field name="model">jatetxeko_estatistikak.zerbitzari_pedidos</field>
+      <field name="arch" type="xml">
+        <form string="Zerbitzarien Eskaerak">
+          <sheet>
+            <group>
+              <h2>Zerbitzarien Eskaerak</h2>
+              <p>Sinkronizatu aurretik, ziurtatu <strong>Zerbitzariak</strong> eta <strong>Eskaerak</strong> datuak sinkronizatu dituzula dagozkien menuetatik.</p>
+              <p>Klikatu "Sinkronizatu" botoian zerbitzari bakoitzak egindako eskaerak kalkulatzeko, eta ondoren "Ikusi Grafikoa" botoian emaitzak ikusteko.</p>
+              <p><strong>Oharra:</strong> Grafikoa hutsik agertzen bada, ziurtatu datuak lehenik sinkronizatu dituzula.</p>
+            </group>
+            <group>
+              <!-- Sincronización botoia administratzaileentzat soilik ikusgai -->
+              <button name="sincronizar_zerbitzari_pedidos"
+                      type="object"
+                      string="Sinkronizatu"
+                      class="oe_highlight"
+                      icon="fa-refresh"
+                      groups="base.group_system"/>
+              <button string="Ikusi Grafikoa"
+                      type="action"
+                      name="%(jatetxeko_estatistikak.action_zerbitzari_pedidos_graph_only)d"
+                      class="oe_highlight"
+                      icon="fa-bar-chart"/>
+            </group>
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+    <!-- Zerbitzari Pedidoen Zerrenda Ikuspegia (Aukerakoa) -->
+    <record id="jatetxeko_estatistikak_zerbitzari_pedidos_list_view" model="ir.ui.view">
+      <field name="name">zerbitzari_pedidos.list.view</field>
+      <field name="model">jatetxeko_estatistikak.zerbitzari_pedidos</field>
+      <field name="arch" type="xml">
+        <list string="Zerbitzarien Eskaerak">
+          <field name="zerbitzari_nombre" string="Zerbitzariaren Izena"/>
+          <field name="cantidad_pedidos" string="Eskaera Kopurua"/>
+        </list>
+      </field>
+    </record>
+
+    <!-- Grafiko Ikuspegiaren Ekintza (Nagusia, formularekin) -->
+    <record id="action_zerbitzari_pedidos_graph" model="ir.actions.act_window">
+      <field name="name">Zerbitzarien Eskaerak</field>
+      <field name="res_model">jatetxeko_estatistikak.zerbitzari_pedidos</field>
+      <field name="view_mode">form,graph</field>
+      <field name="view_id" ref="jatetxeko_estatistikak_zerbitzari_pedidos_form_view"/>
+    </record>
+
+    <!-- ========== ASTEKO EGUNEN ARABERAKO ESKAEREN IKUSPEGIAK ========== -->
+    <!-- Astean Egunen Araberako Eskaeren Grafiko Ikuspegia -->
+    <record id="jatetxeko_estatistikak_pedidos_dia_semana_graph_view" model="ir.ui.view">
+      <field name="name">pedidos_dia_semana.graph.view</field>
+      <field name="model">jatetxeko_estatistikak.pedidos_dia_semana</field>
+      <field name="arch" type="xml">
+        <graph string="Astean Egunen Araberako Eskaerak" type="bar">
+          <field name="dia_semana" type="row"/>
+          <field name="cantidad_pedidos" type="measure"/>
+        </graph>
+      </field>
+    </record>
+
+    <!-- Grafikoa soilik irekitzeko ekintza berezia -->
+    <record id="action_pedidos_dia_semana_graph_only" model="ir.actions.act_window">
+      <field name="name">Ikusi Astean Egunen Araberako Eskaeren Grafikoa</field>
+      <field name="res_model">jatetxeko_estatistikak.pedidos_dia_semana</field>
+      <field name="view_mode">graph</field>
+      <field name="view_id" ref="jatetxeko_estatistikak_pedidos_dia_semana_graph_view"/>
+    </record>
+
+    <!-- Astean Egunen Araberako Eskaeren Formulario Ikuspegia (Ongietorri Orria) -->
+    <record id="jatetxeko_estatistikak_pedidos_dia_semana_form_view" model="ir.ui.view">
+      <field name="name">pedidos_dia_semana.form.view</field>
+      <field name="model">jatetxeko_estatistikak.pedidos_dia_semana</field>
+      <field name="arch" type="xml">
+        <form string="Astean Egunen Araberako Eskaerak">
+          <sheet>
+            <group>
+              <h2>Astean Egunen Araberako Eskaerak</h2>
+              <p>Sinkronizatu aurretik, ziurtatu <strong>Eskaerak</strong> datuak sinkronizatu dituzula bere menutik.</p>
+              <p>Klikatu "Sinkronizatu" botoian astean egunen araberako eskaerak kalkulatzeko, eta ondoren "Ikusi Grafikoa" botoian emaitzak ikusteko.</p>
+              <p><strong>Oharra:</strong> Grafikoa hutsik agertzen bada, ziurtatu datuak lehenik sinkronizatu dituzula.</p>
+            </group>
+            <group>
+              <!-- Sincronización botoia administratzaileentzat soilik ikusgai -->
+              <button name="sincronizar_pedidos_dia_semana"
+                      type="object"
+                      string="Sinkronizatu"
+                      class="oe_highlight"
+                      icon="fa-refresh"
+                      groups="base.group_system"/>
+              <button string="Ikusi Grafikoa"
+                      type="action"
+                      name="%(jatetxeko_estatistikak.action_pedidos_dia_semana_graph_only)d"
+                      class="oe_highlight"
+                      icon="fa-bar-chart"/>
+            </group>
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+    <!-- Grafiko Ikuspegiaren Ekintza (Nagusia, formularekin) -->
+    <record id="action_pedidos_dia_semana_graph" model="ir.actions.act_window">
+      <field name="name">Astean Egunen Araberako Eskaerak</field>
+      <field name="res_model">jatetxeko_estatistikak.pedidos_dia_semana</field>
+      <field name="view_mode">form,graph</field>
+      <field name="view_id" ref="jatetxeko_estatistikak_pedidos_dia_semana_form_view"/>
+    </record>
+
+    <!-- ========== ASTEKO EGUNEN ARABERAKO FAKTURAZIOAREN IKUSPEGIAK ========== -->
+    <!-- Astean Egunen Araberako Fakturazioaren Grafiko Ikuspegia -->
+    <record id="jatetxeko_estatistikak_facturacion_dia_semana_graph_view" model="ir.ui.view">
+      <field name="name">facturacion_dia_semana.graph.view</field>
+      <field name="model">jatetxeko_estatistikak.facturacion_dia_semana</field>
+      <field name="arch" type="xml">
+        <graph string="Astean Egunen Araberako Fakturazioa" type="bar">
+          <field name="dia_semana" type="row"/>
+          <field name="total_facturado" type="measure"/>
+        </graph>
+      </field>
+    </record>
+
+    <!-- Grafikoa soilik irekitzeko ekintza berezia -->
+    <record id="action_facturacion_dia_semana_graph_only" model="ir.actions.act_window">
+      <field name="name">Ikusi Astean Egunen Araberako Fakturazioaren Grafikoa</field>
+      <field name="res_model">jatetxeko_estatistikak.facturacion_dia_semana</field>
+      <field name="view_mode">graph</field>
+      <field name="view_id" ref="jatetxeko_estatistikak_facturacion_dia_semana_graph_view"/>
+    </record>
+
+    <!-- Astean Egunen Araberako Fakturazioaren Formulario Ikuspegia (Ongietorri Orria) -->
+    <record id="jatetxeko_estatistikak_facturacion_dia_semana_form_view" model="ir.ui.view">
+      <field name="name">facturacion_dia_semana.form.view</field>
+      <field name="model">jatetxeko_estatistikak.facturacion_dia_semana</field>
+      <field name="arch" type="xml">
+        <form string="Astean Egunen Araberako Fakturazioa">
+          <sheet>
+            <group>
+              <h2>Astean Egunen Araberako Fakturazioa</h2>
+              <p>Sinkronizatu aurretik, ziurtatu <strong>Eskaerak</strong> datuak sinkronizatu dituzula bere menutik.</p>
+              <p>Klikatu "Sinkronizatu" botoian astean egunen araberako fakturazioa kalkulatzeko, eta ondoren "Ikusi Grafikoa" botoian emaitzak ikusteko.</p>
+              <p><strong>Oharra:</strong> Grafikoa hutsik agertzen bada, ziurtatu datuak lehenik sinkronizatu dituzula.</p>
+            </group>
+            <group>
+              <!-- Sincronización botoia administratzaileentzat soilik ikusgai -->
+              <button name="sincronizar_facturacion_dia_semana"
+                      type="object"
+                      string="Sinkronizatu"
+                      class="oe_highlight"
+                      icon="fa-refresh"
+                      groups="base.group_system"/>
+              <button string="Ikusi Grafikoa"
+                      type="action"
+                      name="%(jatetxeko_estatistikak.action_facturacion_dia_semana_graph_only)d"
+                      class="oe_highlight"
+                      icon="fa-bar-chart"/>
+            </group>
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+    <!-- Grafiko Ikuspegiaren Ekintza (Nagusia, formularekin) -->
+    <record id="action_facturacion_dia_semana_graph" model="ir.actions.act_window">
+      <field name="name">Astean Egunen Araberako Fakturazioa</field>
+      <field name="res_model">jatetxeko_estatistikak.facturacion_dia_semana</field>
+      <field name="view_mode">form,graph</field>
+      <field name="view_id" ref="jatetxeko_estatistikak_facturacion_dia_semana_form_view"/>
+    </record>
+
+    <!-- ========== HILABETEKO EGUNEN ARABERAKO ESKAEREN IKUSPEGIAK ========== -->
+    <!-- Hilabetean Egunen Araberako Eskaeren Grafiko Ikuspegia -->
+    <record id="jatetxeko_estatistikak_pedidos_dia_mes_graph_view" model="ir.ui.view">
+      <field name="name">pedidos_dia_mes.graph.view</field>
+      <field name="model">jatetxeko_estatistikak.pedidos_dia_mes</field>
+      <field name="arch" type="xml">
+        <graph string="Hilabetean Egunen Araberako Eskaerak" type="bar">
+          <field name="dia_mes" type="row"/>
+          <field name="cantidad_pedidos" type="measure"/>
+        </graph>
+      </field>
+    </record>
+
+    <!-- Grafikoa soilik irekitzeko ekintza berezia -->
+    <record id="action_pedidos_dia_mes_graph_only" model="ir.actions.act_window">
+      <field name="name">Ikusi Hilabetean Egunen Araberako Eskaeren Grafikoa</field>
+      <field name="res_model">jatetxeko_estatistikak.pedidos_dia_mes</field>
+      <field name="view_mode">graph</field>
+      <field name="view_id" ref="jatetxeko_estatistikak_pedidos_dia_mes_graph_view"/>
+    </record>
+
+    <!-- Hilabetean Egunen Araberako Eskaeren Formulario Ikuspegia (Ongietorri Orria) -->
+    <record id="jatetxeko_estatistikak_pedidos_dia_mes_form_view" model="ir.ui.view">
+      <field name="name">pedidos_dia_mes.form.view</field>
+      <field name="model">jatetxeko_estatistikak.pedidos_dia_mes</field>
+      <field name="arch" type="xml">
+        <form string="Hilabetean Egunen Araberako Eskaerak">
+          <sheet>
+            <group>
+              <h2>Hilabetean Egunen Araberako Eskaerak</h2>
+              <p>Sinkronizatu aurretik, ziurtatu <strong>Eskaerak</strong> datuak sinkronizatu dituzula bere menutik.</p>
+              <p>Klikatu "Sinkronizatu" botoian hilabetean egunen araberako eskaerak kalkulatzeko, eta ondoren "Ikusi Grafikoa" botoian emaitzak ikusteko.</p>
+              <p><strong>Oharra:</strong> Grafikoa hutsik agertzen bada, ziurtatu datuak lehenik sinkronizatu dituzula.</p>
+            </group>
+            <group>
+              <!-- Sincronización botoia administratzaileentzat soilik ikusgai -->
+              <button name="sincronizar_pedidos_dia_mes"
+                      type="object"
+                      string="Sinkronizatu"
+                      class="oe_highlight"
+                      icon="fa-refresh"
+                      groups="base.group_system"/>
+              <button string="Ikusi Grafikoa"
+                      type="action"
+                      name="%(jatetxeko_estatistikak.action_pedidos_dia_mes_graph_only)d"
+                      class="oe_highlight"
+                      icon="fa-bar-chart"/>
+            </group>
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+    <!-- Grafiko Ikuspegiaren Ekintza (Nagusia, formularekin) -->
+    <record id="action_pedidos_dia_mes_graph" model="ir.actions.act_window">
+      <field name="name">Hilabetean Egunen Araberako Eskaerak</field>
+      <field name="res_model">jatetxeko_estatistikak.pedidos_dia_mes</field>
+      <field name="view_mode">form,graph</field>
+      <field name="view_id" ref="jatetxeko_estatistikak_pedidos_dia_mes_form_view"/>
+    </record>
+
+    <!-- ========== MENÚ NAGUSIAK ========== -->
+    <!-- Menú nagusia -->
+    <menuitem id="jatetxeko_estatistikak_menu_root" name="Estatistikak" sequence="10"/>
+
+    <!-- Zerbitzariak Menúa -->
+    <menuitem id="jatetxeko_estatistikak_zerbitzaria_menu" 
+              name="Zerbitzariak" 
+              parent="jatetxeko_estatistikak_menu_root"
+              sequence="20"/>
+              
+    <menuitem id="jatetxeko_estatistikak_zerbitzaria_list_menu"
+              name="Zerrenda"
+              parent="jatetxeko_estatistikak_zerbitzaria_menu"
+              action="jatetxeko_estatistikak_zerbitzaria_list_action"
+              sequence="10"/>
+              
+    <menuitem id="jatetxeko_estatistikak_zerbitzaria_kanban_menu"
+              name="Ikuspegia"
+              parent="jatetxeko_estatistikak_zerbitzaria_menu"
+              action="jatetxeko_estatistikak_zerbitzaria_kanban_action"
+              sequence="20"/>
+
+    <!-- Eskaerak Menúa -->
+    <menuitem id="jatetxeko_estatistikak_eskaera_menu" 
+              name="Eskaerak" 
+              parent="jatetxeko_estatistikak_menu_root"
+              sequence="30"/>
+              
+    <menuitem id="jatetxeko_estatistikak_eskaera_list_menu"
+              name="Kudeatu Eskaerak"
+              parent="jatetxeko_estatistikak_eskaera_menu"
+              action="jatetxeko_estatistikak_eskaera_list_action"
+              sequence="10"/>
+
+    <!-- Mahaiak Menúa -->
+    <menuitem id="jatetxeko_estatistikak_mahaia_menu" 
+              name="Mahaiak" 
+              parent="jatetxeko_estatistikak_menu_root"
+              action="action_mahaia_kanban"
+              sequence="40"/>
+
+    <!-- Platerak Menúa -->
+    <menuitem id="jatetxeko_estatistikak_platera_menu" 
+              name="Platerak" 
+              parent="jatetxeko_estatistikak_menu_root" 
+              action="action_platera_kanban" 
+              sequence="50"/>
+
+    <!-- Eskatuenak Diren Platerak Menúa -->
+    <menuitem id="jatetxeko_estatistikak_plateracant_menu"
+              name="Eskatuenak Diren Platerak"
+              parent="jatetxeko_estatistikak_menu_root"
+              action="action_plateracant_graph"
+              sequence="60"/>
+
+    <!-- Zerbitzarien Eskaerak Menúa -->
+    <menuitem id="jatetxeko_estatistikak_zerbitzari_pedidos_menu"
+              name="Zerbitzarien Eskaerak"
+              parent="jatetxeko_estatistikak_menu_root"
+              action="action_zerbitzari_pedidos_graph"
+              sequence="70"/>
+
+    <!-- Astean Egunen Araberako Eskaerak Menúa -->
+    <menuitem id="jatetxeko_estatistikak_pedidos_dia_semana_menu"
+              name="Astean Egunen Araberako Eskaerak"
+              parent="jatetxeko_estatistikak_menu_root"
+              action="action_pedidos_dia_semana_graph"
+              sequence="80"/>
+
+    <!-- Astean Egunen Araberako Fakturazioa Menúa -->
+    <menuitem id="jatetxeko_estatistikak_facturacion_dia_semana_menu"
+              name="Astean Egunen Araberako Fakturazioa"
+              parent="jatetxeko_estatistikak_menu_root"
+              action="action_facturacion_dia_semana_graph"
+              sequence="90"/>
+
+    <!-- Hilabetean Egunen Araberako Eskaerak Menúa -->
+    <menuitem id="jatetxeko_estatistikak_pedidos_dia_mes_menu"
+              name="Hilabetean Egunen Araberako Eskaerak"
+              parent="jatetxeko_estatistikak_menu_root"
+              action="action_pedidos_dia_mes_graph"
+              sequence="100"/>
+  </data>
+</odoo>
