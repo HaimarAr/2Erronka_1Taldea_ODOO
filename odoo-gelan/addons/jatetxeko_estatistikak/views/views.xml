@@ -96,7 +96,7 @@
               <field name="email" string="Emaila" widget="email"/>
               <!-- Administratzaileentzat soilik ikusgai diren eremu sentikorrak -->
               <field name="pasahitza" groups="base.group_system" password="True"/>
-              <field name="nivel_Permisos" string="Baimen Maila" groups="base.group_system"/>
+              <field name="nivel_permisos" string="Baimen Maila" groups="base.group_system"/>
               <field name="txat_permiso" string="Txat Baimena" groups="base.group_system"/>
               <field name="created_at" string="Sortze Data" readonly="1"/>
               <field name="updated_at" string="Eguneratze Data" readonly="1"/>

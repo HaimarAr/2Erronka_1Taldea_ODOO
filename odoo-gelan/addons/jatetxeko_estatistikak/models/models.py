@@ -11,17 +11,30 @@ _logger = logging.getLogger(__name__)
 class Zerbitzaria(models.Model):
     _name = 'jatetxeko_estatistikak.zerbitzaria'
     _description = 'Zerbitzaria'
+    _rec_name = 'worker_id'  # Añadido para asegurar que Odoo tenga un campo por defecto
 
-    worker_id = fields.Integer(string="ID Langilea", readonly=False, required=True, copy=False)
-    izena = fields.Char(string="Izena", required=True)
-    abizena = fields.Char(string="Abizena", required=True)
-    pasahitza = fields.Char(string="Pasahitza", required=True, groups="base.group_system")
-    email = fields.Char(string="Emaila", required=True)
-    nivel_Permisos = fields.Integer(string="Nivel de Permisos", groups="base.group_system")
-    txat_permiso = fields.Boolean(string="Txat Permiso", default=True, groups="base.group_system")
-    created_at = fields.Datetime(string="Sortze Data", readonly=True)
-    updated_at = fields.Datetime(string="Eguneratze Data", readonly=True)
-    deleted_at = fields.Datetime(string="Ezabatze Data", readonly=True)
+    worker_id = fields.Char(string="Langile IDa")
+    izena = fields.Char(string="Izena")
+    abizena = fields.Char(string="Abizena")
+    email = fields.Char(string="Emaila")
+    pasahitza = fields.Char(string="Pasahitza", groups="base.group_system", password=True)
+    nivel_permisos = fields.Selection([('admin', 'Administratzailea'), ('user', 'Erabiltzailea')], string="Baimen Maila", groups="base.group_system")
+    txat_permiso = fields.Boolean(string="Txat Baimena", groups="base.group_system")
+    created_at = fields.Datetime(string="Sortze Data")
+    updated_at = fields.Datetime(string="Eguneratze Data")
+    deleted_at = fields.Datetime(string="Ezabatze Data")
+
+    def name_get(self):
+        _logger.debug(f"Calling name_get for Zerbitzaria: {self}")
+        result = []
+        for record in self:
+            name = f"{record.izena or ''} {record.abizena or ''}".strip()
+            if not name:
+                name = record.worker_id or "Unknown"
+            result.append((record.id, name))
+        return result
+
+    # Resto del código del modelo (constraints, create, sincronizar_datos, etc.)
 
     @api.constrains('worker_id')
     def _check_worker_id_unique(self):
@@ -66,7 +79,7 @@ class Zerbitzaria(models.Model):
 
         # Enviar los datos a la API externa
         try:
-            api_url = "http://host.docker.internal:80/zerbitzariak_konexioa.php"
+            api_url = "http://192.168.115.188:80/zerbitzariak_konexioa.php"
             headers = {'Content-Type': 'application/json'}
             response = requests.post(api_url, json=worker_data, headers=headers)
             response.raise_for_status()
@@ -92,83 +105,99 @@ class Zerbitzaria(models.Model):
     def sincronizar_datos(self):
         try:
             # Obtener los datos de la API
-            api_url = "http://host.docker.internal:80/zerbitzariak_konexioa.php"
+            api_url = "http://192.168.115.188:80/zerbitzariak_konexioa.php"
             response = requests.get(api_url)
             response.raise_for_status()
-    
+
             if not response.text.strip():
                 raise UserError(_("La API devolvió una respuesta vacía."))
-    
+
             try:
                 data = response.json()
             except ValueError as e:
                 _logger.error(f"Error al parsear JSON: {str(e)} - Respuesta: {response.text}")
                 raise UserError(_("Error al parsear la respuesta de la API: %s - Respuesta: %s") % (str(e), response.text))
-    
+
             if data['status_code'] != 200:
                 raise UserError(_("Error al obtener los datos de los trabajadores: %s") % data.get('mezua', 'Error desconocido'))
-    
+
             langileak = data.get('langileak', [])
             created_count = 0
             updated_count = 0
             skipped_count = 0
-    
+
             # Expresión regular para validar emails
             import re
             email_pattern = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
-    
+
             for langilea in langileak:
                 email = langilea.get('email', '')
                 izena = langilea.get('izena', '')
-                abizena = langilea.get('abizena', '')
-    
-                # Validar campos requeridos y formato del email
-                if not email or not izena or not abizena:
-                    _logger.warning(f"Saltando trabajador con campos requeridos vacíos: {langilea}")
+                abizena = langilea.get('abizena', '')  # Abizena es opcional
+
+                # Validar campos requeridos (solo izena)
+                if not izena:
+                    _logger.warning(f"Saltando trabajador con 'izena' vacío: {langilea}")
                     skipped_count += 1
                     continue
-                
-                if not re.match(email_pattern, email):
-                    _logger.warning(f"Saltando trabajador con email inválido: {email} - Datos: {langilea}")
-                    skipped_count += 1
-                    continue
-                
+
+                # Manejar email inválido asignando un valor por defecto
+                if not email or not re.match(email_pattern, email):
+                    original_email = email
+                    email = f"invalid_email_{langilea.get('id', 'unknown')}@example.com"
+                    _logger.warning(f"Email inválido o vacío detectado: '{original_email}'. Usando email por defecto: {email} - Datos: {langilea}")
+
                 worker = self.search([('email', '=', email)], limit=1)
+                # Mapear nivel_Permisos de entero a valor del Selection
+                nivel_permisos = 'user' if langilea.get('nivel_Permisos', 0) == 0 else 'admin'
                 worker_data = {
                     'izena': izena,
-                    'abizena': abizena,
+                    'abizena': abizena if abizena else None,  # Usar None para JSON
                     'email': email,
-                    'nivel_Permisos': langilea.get('nivel_Permisos', 0),
-                    'txat_permiso': langilea.get('txat_permiso', True),
+                    'nivel_permisos': nivel_permisos,  # Usar el nombre del campo correcto
+                    'txat_permiso': langilea.get('txat_permiso', True),  # Asegurar formato booleano
                     'created_at': langilea.get('created_at'),
                     'updated_at': langilea.get('updated_at'),
                     'deleted_at': langilea.get('deleted_at'),
                 }
-    
+
                 try:
-                    api_url_post = "http://host.docker.internal:80/zerbitzariak_konexioa.php"
+                    api_url_post = "http://192.168.115.188:80/zerbitzariak_konexioa.php"
                     worker_data_to_send = worker_data.copy()
                     worker_data_to_send['pasahitza'] = 'default_password' if not worker else (worker.pasahitza or 'default_password')
                     if worker and worker.worker_id:
-                        worker_data_to_send['worker_id'] = worker.worker_id
+                        worker_data_to_send['worker_id'] = int(worker.worker_id)
+                    else:
+                        worker_data_to_send['worker_id'] = int(langilea.get('id', 0))
+
+                    # Asegurar que los valores sean compatibles con JSON
+                    worker_data_to_send['created_at'] = worker_data_to_send['created_at'] or None
+                    worker_data_to_send['updated_at'] = worker_data_to_send['updated_at'] or None
+                    worker_data_to_send['deleted_at'] = worker_data_to_send['deleted_at'] or None
+                    worker_data_to_send['txat_permiso'] = bool(worker_data_to_send['txat_permiso'])  # Asegurar booleano
+
+                    # Enviar como JSON
                     _logger.info(f"Datos enviados a la API (POST): {worker_data_to_send}")
                     response_post = requests.post(api_url_post, json=worker_data_to_send)
                     response_post.raise_for_status()
-                    response_data = response_post.json()
-    
+                    try:
+                        response_data = response_post.json()
+                    except ValueError:
+                        response_data = {'error': response_post.text}
+
                     if response_post.status_code not in (200, 201):
                         _logger.error(f"Error al sincronizar el trabajador con la base de datos externa: {response_data}")
                         raise UserError(_("No se pudo sincronizar el trabajador con la base de datos externa: %s") % response_data.get('error', 'Error desconocido'))
-    
+
                     if 'worker_id' in response_data and (not worker or not worker.worker_id):
-                        worker_data['worker_id'] = response_data['worker_id']
+                        worker_data['worker_id'] = str(response_data['worker_id'])
                     else:
-                        worker_data['worker_id'] = worker.worker_id if worker else response_data.get('worker_id')
-    
+                        worker_data['worker_id'] = worker.worker_id if worker else str(response_data.get('worker_id'))
+
                 except requests.exceptions.RequestException as e:
-                    _logger.error(f"Error al enviar datos a la API externa: {str(e)}")
-                    raise UserError(_("Error al sincronizar el trabajador con la base de datos externa: %s") % str(e))
-    
+                    _logger.error(f"Error al enviar datos a la API externa: {str(e)} - Respuesta: {response_post.text if 'response_post' in locals() else 'Sin respuesta'}")
+                    raise UserError(_("Error al sincronizar el trabajador con la base de datos externa: %s - Respuesta: %s") % (str(e), response_post.text if 'response_post' in locals() else 'Sin respuesta'))
+
                 try:
                     if worker:
                         worker.write(worker_data)
@@ -183,7 +212,7 @@ class Zerbitzaria(models.Model):
                     _logger.error(f"Error al crear/actualizar trabajador en Odoo: {str(e)} - Datos: {worker_data}")
                     skipped_count += 1
                     continue
-                
+
             message = f"{created_count} langile berri | {updated_count} eguneratu"
             if skipped_count > 0:
                 message += f" | {skipped_count} saltados por datos inválidos"
@@ -197,12 +226,13 @@ class Zerbitzaria(models.Model):
                     'sticky': False,
                 }
             }
-    
+
         except requests.exceptions.RequestException as e:
             raise UserError(_("Error al sincronizar los trabajadores: %s") % str(e))
         except Exception as e:
             _logger.error(f"Error inesperado en sincronizar_datos: {str(e)}")
             raise UserError(_("Error inesperado al sincronizar los trabajadores: %s") % str(e))
+
 
     def sincronizar_registro_individual(self, email=None):
         """Sincroniza un trabajador específico desde la API externa usando su email."""
@@ -212,7 +242,7 @@ class Zerbitzaria(models.Model):
             raise UserError(_("Emaila beharrezkoa da langilea sinkronizatzeko."))
 
         try:
-            api_url = f"http://host.docker.internal:80/zerbitzariak_konexioa.php?email={email}"
+            api_url = f"http://192.168.115.188:80/zerbitzariak_konexioa.php?email={email}"
             response = requests.get(api_url)
             response.raise_for_status()
             data = response.json()
@@ -237,7 +267,7 @@ class Zerbitzaria(models.Model):
 
             # Enviar los datos a la API externa para crear o actualizar en MySQL
             try:
-                api_url_post = "http://host.docker.internal:80/zerbitzariak_konexioa.php"
+                api_url_post = "http://192.168.115.188:80/zerbitzariak_konexioa.php"
                 worker_data_to_send = worker_data.copy()
                 worker_data_to_send['pasahitza'] = 'default_password' if not worker else worker.pasahitza
                 # Incluir worker_id si ya existe en el registro
@@ -304,31 +334,40 @@ class Eskaera(models.Model):
 
     def sincronizar_eskaerak(self):
         try:
-            url = "http://host.docker.internal:80/eskaera_konexioa.php"
+            # Sincronizar los camareros primero
+            Zerbitzaria = self.env['jatetxeko_estatistikak.zerbitzaria']
+            Zerbitzaria.sincronizar_datos()
+
+            # Obtener todos los pedidos desde la API
+            url = "http://192.168.115.188:80/eskaera_konexioa.php"
             response = requests.get(url, timeout=10)
             response.raise_for_status()
             result = response.json()
-            
+
             if result.get('status_code') == 200 and 'eskaerak' in result:
                 Eskaera = self.env['jatetxeko_estatistikak.eskaera']
                 created_count = 0
                 updated_count = 0
-                
+
                 for eskaria in result['eskaerak']:
                     if not eskaria.get('id'):
-                        _logger.warning(f"Eskaera sin ID. Saltando.")
+                        _logger.warning(f"Eskaera sin ID. Saltando: {eskaria}")
                         continue
 
                     existing = Eskaera.search([('external_ref', '=', str(eskaria.get('id')))], limit=1)
-                    
+
+                    # Buscar el camarero por worker_id
                     langilea = False
                     langilea_id = eskaria.get('langilea_id')
                     if langilea_id:
                         langilea = self.env['jatetxeko_estatistikak.zerbitzaria'].search(
                             [('worker_id', '=', str(langilea_id))], limit=1)
                         if not langilea:
-                            _logger.warning(f"No se encontró Zerbitzaria para langilea_id {langilea_id}.")
+                            _logger.warning(f"No se encontró Zerbitzaria para langilea_id {langilea_id}. Datos de la eskaera: {eskaria}")
+                        else:
+                            _logger.info(f"Zerbitzaria encontrado para langilea_id {langilea_id}: {langilea.name_get()[0][1]} (worker_id={langilea.worker_id})")
 
+                    # Buscar la mesa por zenbakia
                     mahaia = False
                     mahaia_id = eskaria.get('mahaila_id')
                     if mahaia_id:
@@ -336,7 +375,7 @@ class Eskaera(models.Model):
                             [('zenbakia', '=', int(mahaia_id))], limit=1)
                         if not mahaia:
                             _logger.warning(f"No se encontró Mahaia con zenbakia {mahaia_id}.")
-                    
+
                     vals = {
                         'external_ref': str(eskaria.get('id')),
                         'langilea_id': langilea.id if langilea else False,
@@ -346,14 +385,18 @@ class Eskaera(models.Model):
                         'EskaeraDone': bool(eskaria.get('EskaeraDone', False)),
                         'ordainduta': bool(eskaria.get('ordainduta', False)),
                     }
-                    
+
                     if existing:
                         existing.write(vals)
                         updated_count += 1
                     else:
                         Eskaera.create(vals)
                         created_count += 1
-                
+
+                # Actualizar las estadísticas de pedidos por camarero después de sincronizar
+                ZerbitzariPedidos = self.env['jatetxeko_estatistikak.zerbitzari_pedidos']
+                ZerbitzariPedidos.sincronizar_zerbitzari_pedidos()
+
                 message = f"{created_count} eskaera berri | {updated_count} eguneratu"
                 return {
                     'type': 'ir.actions.client',
@@ -367,7 +410,7 @@ class Eskaera(models.Model):
                 }
             else:
                 raise UserError(_(result.get('mezua', 'Datu basean errorea')))
-                
+
         except Exception as e:
             error_msg = _('Errorea eskaerak sinkronizatzerakoan: %s') % str(e)
             _logger.error(error_msg)
@@ -378,7 +421,7 @@ class Eskaera(models.Model):
             if not self.external_ref:
                 raise UserError(_("Eskaerak ez du IDrik"))
             
-            api_url = f"http://host.docker.internal:80/eskaera_konexioa.php?id={self.external_ref}"
+            api_url = f"http://192.168.115.188:80/eskaera_konexioa.php?id={self.external_ref}"
             response = requests.get(api_url, timeout=10)
             
             if response.status_code == 200:
@@ -451,17 +494,17 @@ class Mahaia(models.Model):
 
     def sincronizar_guztiak_mahaiak(self):
         try:
-            url = "http://host.docker.internal:80/mahaiak_konexioa.php"
+            url = "http://192.168.115.188:80/mahaiak_konexioa.php"
             response = requests.get(url, timeout=10)
             response.raise_for_status()
             result = response.json()
 
-            if result.get('status_code') == 200 and 'mahaiak' in result:
+            if result.get('status_code') == 200 and 'mahaia' in result:
                 Mahaia = self.env['jatetxeko_estatistikak.mahaia']
                 created_count = 0
                 updated_count = 0
 
-                for mahaia in result['mahaiak']:
+                for mahaia in result['mahaia']:
                     mahaia_id = mahaia.get('id')
                     if not mahaia_id:
                         _logger.warning(f"Mahaia sin ID. Saltando: {mahaia}")
@@ -469,12 +512,24 @@ class Mahaia(models.Model):
 
                     existing = Mahaia.search([('zenbakia', '=', int(mahaia_id))], limit=1)
 
+                    # Convertir terraza a booleano (0 → False, cualquier otro valor → True)
+                    terraza_value = mahaia.get('terraza', 0)
+                    terraza_bool = False if terraza_value == 0 else True
+
+                    # Parsear updated_at desde el formato ISO 8601
+                    updated_at = mahaia.get('updated_at')
+                    if updated_at:
+                        updated_at = datetime.fromisoformat(updated_at.replace('Z', '+00:00'))
+                        updated_at = updated_at.replace(tzinfo=None)
+                    else:
+                        updated_at = fields.Datetime.now()
+
                     vals = {
                         'zenbakia': int(mahaia_id),
                         'eserlekuak': mahaia.get('eserlekuak', 0),
                         'habilitado': mahaia.get('habilitado', True),
-                        'terraza': mahaia.get('terraza', False),
-                        'updated_at': mahaia.get('updated_at', fields.Datetime.now()),
+                        'terraza': terraza_bool,
+                        'updated_at': updated_at,
                     }
 
                     if existing:
@@ -508,19 +563,32 @@ class Mahaia(models.Model):
             if not self.zenbakia:
                 raise UserError(_("Mahiak ez du Zenbakirik"))
 
-            api_url = f"http://host.docker.internal:80/mahaiak_konexioa.php?id={self.zenbakia}"
+            api_url = f"http://192.168.115.188:80/mahaiak_konexioa.php?id={self.zenbakia}"
             response = requests.get(api_url, timeout=10)
             response.raise_for_status()
             data = response.json()
 
             if data.get('status_code') == 200 and 'mahaia' in data:
                 mahaia = data['mahaia']
+
+                # Convertir terraza a booleano
+                terraza_value = mahaia.get('terraza', 0)
+                terraza_bool = False if terraza_value == 0 else True
+
+                # Parsear updated_at desde el formato ISO 8601
+                updated_at = mahaia.get('updated_at')
+                if updated_at:
+                    updated_at = datetime.fromisoformat(updated_at.replace('Z', '+00:00'))
+                    updated_at = updated_at.replace(tzinfo=None)
+                else:
+                    updated_at = fields.Datetime.now()
+
                 self.write({
                     'zenbakia': int(mahaia.get('id')),
                     'eserlekuak': mahaia.get('eserlekuak', 0),
                     'habilitado': mahaia.get('habilitado', True),
-                    'terraza': mahaia.get('terraza', False),
-                    'updated_at': mahaia.get('updated_at', fields.Datetime.now()),
+                    'terraza': terraza_bool,
+                    'updated_at': updated_at,
                 })
 
                 return {
@@ -538,12 +606,28 @@ class Mahaia(models.Model):
 
         except Exception as e:
             raise UserError(f"Errorea mahaia sinkronizatzerakoan: {str(e)}")
-        
+
     @api.model
     def create(self, vals):
         # Crear el registro en Odoo
         record = super(Mahaia, self).create(vals)
-        
+
+        # Verificar si la mesa ya existe en la API externa
+        try:
+            check_url = f"http://192.168.115.188:80/mahaiak_konexioa.php?id={record.zenbakia}"
+            response = requests.get(check_url, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+
+            # Si la mesa ya existe en la API externa, no intentamos crearla
+            if data.get('status_code') == 200 and 'mahaia' in data:
+                _logger.info(f"Mesa {record.zenbakia} ya existe en la base de datos externa. No se creará de nuevo.")
+                return record  # Salimos del método sin intentar crear en la API
+
+        except requests.exceptions.RequestException as e:
+            _logger.warning(f"Error al verificar si la mesa {record.zenbakia} existe en la API: {str(e)}")
+            # Continuamos con la creación en la API, pero podríamos manejar esto de manera diferente si es necesario
+
         # Preparar los datos para enviar a la API
         table_data = {
             'zenbakia': record.zenbakia,
@@ -555,12 +639,12 @@ class Mahaia(models.Model):
 
         # Enviar los datos a la API externa
         try:
-            api_url = "http://host.docker.internal:80/api_mahaia.php"  
+            api_url = "http://192.168.115.188:80/api_mahaia.php"
             headers = {
                 'Content-Type': 'application/json',
             }
             response = requests.post(api_url, json=table_data, headers=headers)
-            
+
             if response.status_code == 201:  # Código para "creado"
                 _logger.info(f"Mesa {record.zenbakia} creada exitosamente en la base de datos externa.")
             else:
@@ -568,7 +652,7 @@ class Mahaia(models.Model):
                 raise UserError(
                     _("No se pudo sincronizar la mesa con la base de datos externa: %s") % response.text
                 )
-                
+
         except requests.exceptions.RequestException as e:
             _logger.error(f"Error de conexión con la API: {str(e)}")
             raise UserError(
@@ -615,7 +699,7 @@ class Platera(models.Model):
 
     def sincronizar_guztiak_platerak(self):
         try:
-            url = "http://host.docker.internal:80/platera_konexioa.php"
+            url = "http://192.168.115.188:80/platera_konexioa.php"
             response = requests.get(url, timeout=10)
             response.raise_for_status()
 
@@ -693,7 +777,7 @@ class Platera(models.Model):
             if not self.external_id:
                 raise UserError(_("Platerak ez du IDrik"))
 
-            api_url = f"http://host.docker.internal:80/platera_konexioa.php?id={self.external_id}"
+            api_url = f"http://192.168.115.188:80/platera_konexioa.php?id={self.external_id}"
             response = requests.get(api_url, timeout=10)
             response.raise_for_status()
 
@@ -761,7 +845,7 @@ class PlateraCantidad(models.Model):
 
     def sincronizar_plateracant(self):
         try:
-            url = "http://host.docker.internal:80/plateracant_konexioa.php"
+            url = "http://192.168.115.188:80/plateracant_konexioa.php"
             response = requests.get(url, timeout=10)
             response.raise_for_status()
 
@@ -807,6 +891,7 @@ class PlateraCantidad(models.Model):
             error_msg = _('Errorea plateracant sinkronizatzerakoan: %s') % str(e)
             _logger.error(error_msg)
             raise UserError(error_msg)
+        
 class ZerbitzariPedidos(models.Model):
     _name = 'jatetxeko_estatistikak.zerbitzari_pedidos'
     _description = 'Pedidos por Zerbitzari'
@@ -822,42 +907,60 @@ class ZerbitzariPedidos(models.Model):
             # Obtener todos los pedidos
             Eskaera = self.env['jatetxeko_estatistikak.eskaera']
             pedidos = Eskaera.search([])
-
+            _logger.info(f"Total de pedidos encontrados: {len(pedidos)}")
+    
             # Obtener todos los camareros
             Zerbitzaria = self.env['jatetxeko_estatistikak.zerbitzaria']
             zerbitzariak = Zerbitzaria.search([])
-
+            _logger.info(f"Total de zerbitzariak encontrados: {len(zerbitzariak)}")
+    
             # Crear un diccionario para contar los pedidos por camarero
             pedidos_por_zerbitzari = {}
             for zerbitzari in zerbitzariak:
+                try:
+                    nombre = zerbitzari.name_get()[0][1] if zerbitzari.name_get() else (zerbitzari.worker_id or "Unknown")
+                except Exception as e:
+                    _logger.error(f"Error al obtener el nombre de zerbitzari {zerbitzari.id}: {str(e)}")
+                    nombre = zerbitzari.worker_id or "Unknown"
+    
                 pedidos_por_zerbitzari[zerbitzari.id] = {
-                    'nombre': f"{zerbitzari.name} {zerbitzari.abizena}",
+                    'nombre': nombre,
+                    'worker_id': zerbitzari.worker_id,
                     'cantidad': 0
                 }
-
+                _logger.info(f"Zerbitzaria añadido al conteo: ID={zerbitzari.id}, worker_id={zerbitzari.worker_id}, nombre={nombre}")
+    
             # Contar los pedidos por camarero
             for pedido in pedidos:
-                if pedido.langilea_id.id in pedidos_por_zerbitzari:
-                    pedidos_por_zerbitzari[pedido.langilea_id.id]['cantidad'] += 1
-
+                if pedido.langilea_id:
+                    if pedido.langilea_id.id in pedidos_por_zerbitzari:
+                        pedidos_por_zerbitzari[pedido.langilea_id.id]['cantidad'] += 1
+                        _logger.debug(f"Pedido {pedido.id} asignado a zerbitzari ID={pedido.langilea_id.id} (worker_id={pedido.langilea_id.worker_id})")
+                    else:
+                        _logger.warning(f"Pedido {pedido.id} tiene langilea_id {pedido.langilea_id.id}, pero no está en pedidos_por_zerbitzari")
+                else:
+                    _logger.warning(f"Pedido {pedido.id} no tiene langilea_id asignado")
+    
             # Limpiar los datos existentes antes de sincronizar
             ZerbitzariPedidos = self.env['jatetxeko_estatistikak.zerbitzari_pedidos']
             ZerbitzariPedidos.search([]).unlink()
-
+    
             # Crear nuevos registros con los datos calculados
             created_count = 0
             for zerbitzari_id, data in pedidos_por_zerbitzari.items():
-                vals = {
-                    'zerbitzari_id': zerbitzari_id,
-                    'zerbitzari_nombre': data['nombre'],
-                    'cantidad_pedidos': data['cantidad'],
-                }
-                ZerbitzariPedidos.create(vals)
-                created_count += 1
-
+                if data['cantidad'] > 0:  # Solo incluir camareros con pedidos
+                    vals = {
+                        'zerbitzari_id': zerbitzari_id,
+                        'zerbitzari_nombre': data['nombre'],
+                        'cantidad_pedidos': data['cantidad'],
+                    }
+                    ZerbitzariPedidos.create(vals)
+                    created_count += 1
+                    _logger.info(f"Zerbitzari ID={zerbitzari_id} (worker_id={data['worker_id']}, nombre={data['nombre']}) tiene {data['cantidad']} pedidos")
+    
             # Mostrar notificación de éxito
             return {
-                'type': 'ir.actions.client',
+                'Coords': 'ir.actions.client',
                 'tag': 'display_notification',
                 'params': {
                     'title': _('Sinkronizazioa'),
@@ -866,7 +969,7 @@ class ZerbitzariPedidos(models.Model):
                     'sticky': False,
                 }
             }
-
+    
         except Exception as e:
             error_msg = _('Errorea zerbitzarien pedidos sinkronizatzerakoan: %s') % str(e)
             _logger.error(error_msg)
